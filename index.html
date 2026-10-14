@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanguard Prop — Institutional Trading Evaluation Platform</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js & TradingView Widget -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#080c14',
+              card: '#0f172a',
+              accent: '#22c55e',
+              danger: '#ef4444',
+              warning: '#f59e0b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #080c14; color: #f8fafc; }
+    .glass-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-input { background: rgba(2, 6, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; }
+    .glass-input:focus { border-color: #22c55e; outline: none; }
+    .glow-green { box-shadow: 0 0 20px rgba(34, 197, 94, 0.2); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-black">
+
+  <!-- Header / Navigation -->
+  <header class="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('landing')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-emerald-500/20">V</div>
+        <span class="font-extrabold text-xl tracking-tight text-white">VANGUARD <span class="text-emerald-400">PROP</span></span>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-6">
+        <button onclick="switchTab('landing')" class="nav-btn text-sm font-semibold text-slate-300 hover:text-white transition flex items-center gap-2">
+          <i data-lucide="home" class="w-4 h-4"></i> Accueil
+        </button>
+        <button onclick="switchTab('webtrader')" class="nav-btn text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition flex items-center gap-2 bg-emerald-500/10 px-3.5 py-1.5 rounded-lg border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> WebTrader Direct
+        </button>
+        <button onclick="switchTab('dashboard')" class="nav-btn text-sm font-semibold text-slate-300 hover:text-white transition flex items-center gap-2">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Suivi Compte
+        </button>
+      </nav>
+
+      <button onclick="openAdminModal()" class="flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition">
+        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Admin PIN
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenu Principal -->
+  <main class="max-w-7xl mx-auto px-4 py-8 flex-1 w-full">
+
+    <!-- 1. LANDING PAGE -->
+    <section id="tab-landing" class="space-y-16">
+      <div class="text-center space-y-6 py-12">
+        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> ÉVALUATION SIMULÉE EN TEMPS RÉEL
+        </span>
+        <h1 class="text-4xl md:text-7xl font-black tracking-tight text-white">Obtenez jusqu'à <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">$200 de Capital</span></h1>
+        <p class="text-slate-400 max-w-2xl mx-auto text-base md:text-lg">
+          Prouvez votre discipline en trading. Atteignez l'objectif de 10% sans franchir la ligne rouge des $184, et encaissez 70% de vos bénéfices réels.
+        </p>
+        <div class="pt-4 flex flex-wrap justify-center gap-4">
+          <button onclick="openOrderModal()" class="px-8 py-4 rounded-xl font-extrabold bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/25 active:scale-95 transition flex items-center gap-2">
+            Obtenir un Compte (15 000 FCFA) <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+          <button onclick="switchTab('webtrader')" class="px-8 py-4 rounded-xl font-extrabold bg-slate-900 hover:bg-slate-800 text-white border border-slate-800 transition flex items-center gap-2">
+            Tester le WebTrader <i data-lucide="candlestick-chart" class="w-5 h-5 text-emerald-400"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 items-stretch">
+        <div class="glass-card rounded-2xl p-8 space-y-6 border border-slate-800/80">
+          <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="award" class="text-emerald-400"></i> Challenge Vanguard $200
+          </h3>
+          <p class="text-slate-400 text-sm">Règles claires, verrouillées et transparentes pour garantir le succès des meilleurs traders.</p>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm">
+              <span class="text-slate-400 flex items-center gap-2"><i data-lucide="target" class="w-4 h-4 text-emerald-400"></i> Objectif de Profit (+10%)</span>
+              <span class="font-extrabold text-emerald-400">+$20.00</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm">
+              <span class="text-slate-400 flex items-center gap-2"><i data-lucide="trending-down" class="w-4 h-4 text-amber-400"></i> Perte Max Journalière (2%)</span>
+              <span class="font-extrabold text-amber-400">$4.00 / jour</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm">
+              <span class="text-slate-400 flex items-center gap-2"><i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i> Seuil Absolu (8% Max DD)</span>
+              <span class="font-extrabold text-rose-500">$184.00 (Stop Impératif)</span>
+            </div>
+            <div class="flex justify-between items-center p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-sm">
+              <span class="text-slate-400 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i> Profit Split</span>
+              <span class="font-extrabold text-cyan-400">70% Trader / 30% Firm</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-8 border border-emerald-500/30 flex flex-col justify-between text-center relative overflow-hidden glow-green">
+          <div class="absolute -right-12 -top-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl"></div>
+          <div>
+            <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300">ACCÈS IMMÉDIAT</span>
+            <h4 class="text-3xl font-black text-white mt-4">15 000 FCFA</h4>
+            <p class="text-slate-400 text-xs mt-1">Frais uniques d'évaluation — Aucun abonnement caché</p>
+          </div>
+          <div class="my-6 py-6 border-y border-slate-800/80 space-y-2 text-xs text-slate-300 text-left">
+            <p class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Validation rapide des accès</p>
+            <p class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Paiement local Mobile Money (MTN / Moov)</p>
+            <p class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Paiement Crypto USDT (TRC20)</p>
+            <p class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Retraits sous 24h une fois financé</p>
+          </div>
+          <button onclick="openOrderModal()" class="w-full py-4 rounded-xl font-extrabold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/20">
+            Acheter le Challenge Now
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. WEBTRADER INTERACTIF -->
+    <section id="tab-webtrader" class="hidden space-y-6">
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="glass-card p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-semibold block">Solde Initial</span>
+          <span id="wt-balance" class="text-xl font-black text-white">$200.00</span>
+        </div>
+        <div class="glass-card p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-semibold block">Équité Live</span>
+          <span id="wt-equity" class="text-xl font-black text-emerald-400">$200.00</span>
+        </div>
+        <div class="glass-card p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-semibold block">PnL Ouvert</span>
+          <span id="wt-pnl" class="text-xl font-black text-slate-400">$0.00</span>
+        </div>
+        <div class="glass-card p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-semibold block">Objectif Profit</span>
+          <span id="wt-target" class="text-xl font-black text-white">$0.00 / $20</span>
+        </div>
+        <div class="glass-card p-4 rounded-xl border-rose-500/30 bg-rose-500/5">
+          <span class="text-xs text-rose-400 font-semibold block">Ligne Rouge ($184)</span>
+          <span class="text-xl font-black text-rose-500">-$16.00 MAX</span>
+        </div>
+      </div>
+
+      <div id="breach-alert" class="hidden p-4 rounded-xl bg-rose-500/20 border border-rose-500 text-rose-300 flex items-center justify-between animate-pulse">
+        <div class="flex items-center gap-3">
+          <i data-lucide="alert-octagon" class="w-8 h-8 text-rose-500"></i>
+          <div>
+            <h4 class="font-extrabold text-white">COMPTE ÉLIMINÉ — SEUIL TOUCHÉ (184.00 $)</h4>
+            <p class="text-xs text-rose-300">Votre équité a atteint la perte maximale autorisée. L'accès aux ordres est révoqué.</p>
+          </div>
+        </div>
+        <button onclick="resetAccount()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition">Réinitialiser (15k FCFA)</button>
+      </div>
+
+      <div class="grid lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-3 glass-card rounded-2xl p-4 border border-slate-800/80 flex flex-col h-[540px]">
+          <div class="flex justify-between items-center mb-3">
+            <div class="flex items-center gap-3">
+              <select id="asset-select" onchange="changeSymbol()" class="glass-input font-bold text-sm px-3 py-1.5 rounded-lg">
+                <option value="FX:EURUSD">EUR / USD (Forex)</option>
+                <option value="OANDA:XAUUSD">GOLD / XAUUSD (Or)</option>
+                <option value="BINANCE:BTCUSDT">BITCOIN / BTCUSDT</option>
+              </select>
+              <span id="live-price" class="font-mono text-emerald-400 font-bold text-base">1.08500</span>
+            </div>
+            <span class="text-xs text-slate-500 font-semibold">Graphique TradingView V3</span>
+          </div>
+          <div id="tv_chart_container" class="w-full flex-1 rounded-xl overflow-hidden"></div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-5 border border-slate-800/80 flex flex-col justify-between">
+          <div class="space-y-4">
+            <h3 class="font-extrabold text-white border-b border-slate-800 pb-2 text-sm flex justify-between items-center">
+              Panneau d'Ordre <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-400"></i>
+            </h3>
+
+            <div>
+              <label class="text-xs text-slate-400 font-semibold block mb-1">Volume du Lot</label>
+              <input type="number" id="trade-lot" value="0.10" step="0.01" min="0.01" max="1.00" class="w-full glass-input font-mono text-center font-bold py-2.5 rounded-xl">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <button id="btn-buy" onclick="executeTrade('BUY')" class="py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition">
+                BUY
+              </button>
+              <button id="btn-sell" onclick="executeTrade('SELL')" class="py-3.5 bg-rose-500 hover:bg-rose-400 text-white font-black rounded-xl shadow-lg shadow-rose-500/20 active:scale-95 transition">
+                SELL
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 space-y-3 mt-4">
+            <div class="text-xs text-slate-400 font-semibold flex justify-between">
+              <span>Position Ouverte</span>
+              <span id="pos-type" class="text-slate-500 font-bold">AUCUNE</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-500">PnL Instantané</span>
+              <span id="pos-pnl" class="font-mono font-bold text-sm text-slate-400">$0.00</span>
+            </div>
+            <button id="btn-close" onclick="closePosition()" disabled class="w-full py-2.5 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl transition disabled:opacity-50 cursor-not-allowed">
+              Fermer la Position
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. DASHBOARD TRADER -->
+    <section id="tab-dashboard" class="hidden space-y-8">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Suivi Analytique du Compte</h2>
+          <p class="text-xs text-slate-400">ID Référence: <span class="text-emerald-400 font-mono">#VG-2026-9912</span></p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ÉVALUATION EN COURS</span>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl border border-slate-800">
+        <h3 class="text-lg font-bold text-white mb-4">Courbe de Progression de l'Équité ($)</h3>
+        <div class="h-64">
+          <canvas id="equityChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL DE COMMANDE -->
+  <div id="modal-order" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-6 rounded-2xl border border-slate-800 space-y-6 relative">
+      <button onclick="closeOrderModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <h3 class="text-xl font-bold text-white">Inscription Challenge Vanguard</h3>
+      
+      <form onsubmit="submitOrder(event)" class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Nom complet</label>
+          <input type="text" required placeholder="Émile Crinot" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Numéro Téléphone / WhatsApp</label>
+          <input type="tel" required placeholder="+229 90 00 00 00" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Moyen de Paiement (15 000 FCFA)</label>
+          <select required class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+            <option value="MTN">MTN Mobile Money</option>
+            <option value="MOOV">Moov Money</option>
+            <option value="USDT">Crypto USDT (TRC20)</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-sm shadow-lg shadow-emerald-500/20 transition">
+          Confirmer & Générer Référence
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
+    © 2026 Vanguard Prop Firm. Plateforme de simulation d'évaluation financière.
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    let balance = 200.00;
+    let openPosition = null;
+    let livePrice = 1.08500;
+    let isBreached = false;
+    let priceInterval = null;
+
+    function switchTab(tab) {
+      document.getElementById('tab-landing').classList.add('hidden');
+      document.getElementById('tab-webtrader').classList.add('hidden');
+      document.getElementById('tab-dashboard').classList.add('hidden');
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+
+      if (tab === 'webtrader') {
+        initTradingView('FX:EURUSD');
+        startPriceSimulation();
+      } else if (tab === 'dashboard') {
+        initChart();
+      }
+    }
+
+    function openAdminModal() {
+      const pin = prompt("Code PIN Administrateur Vanguard :");
+      if (pin === "2026") {
+        alert("🔒 Espace Fondateur Déverrouillé.");
+      } else {
+        alert("Code PIN Invalide.");
+      }
+    }
+
+    function openOrderModal() { document.getElementById('modal-order').classList.remove('hidden'); }
+    function closeOrderModal() { document.getElementById('modal-order').classList.add('hidden'); }
+
+    function submitOrder(e) {
+      e.preventDefault();
+      alert("✅ Inscription enregistrée ! Veuillez effectuer le transfert de 15 000 FCFA pour activer votre accès.");
+      closeOrderModal();
+    }
+
+    function initTradingView(symbol) {
+      document.getElementById('tv_chart_container').innerHTML = '';
+      new TradingView.widget({
+        "autosize": true,
+        "symbol": symbol,
+        "interval": "5",
+        "theme": "dark",
+        "style": "1",
+        "locale": "fr",
+        "toolbar_bg": "#0f172a",
+        "container_id": "tv_chart_container"
+      });
+    }
+
+    function changeSymbol() {
+      const symbol = document.getElementById('asset-select').value;
+      if (symbol.includes('BTC')) livePrice = 65000.00;
+      else if (symbol.includes('XAU')) livePrice = 2350.00;
+      else livePrice = 1.08500;
+      initTradingView(symbol);
+    }
+
+    function startPriceSimulation() {
+      if (priceInterval) clearInterval(priceInterval);
+      priceInterval = setInterval(() => {
+        if (isBreached) return;
+        const change = (Math.random() - 0.49) * (livePrice > 1000 ? 2.5 : 0.0003);
+        livePrice = Math.max(0.0001, livePrice + change);
+        document.getElementById('live-price').innerText = livePrice.toFixed(livePrice > 1000 ? 2 : 5);
+        updatePnL();
+      }, 1000);
+    }
+
+    function executeTrade(type) {
+      if (isBreached || openPosition) return;
+      const lot = parseFloat(document.getElementById('trade-lot').value) || 0.10;
+      openPosition = { type, entryPrice: livePrice, lot };
+
+      document.getElementById('pos-type').innerText = type + " (" + lot + " lot)";
+      document.getElementById('pos-type').className = type === 'BUY' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+      document.getElementById('btn-close').disabled = false;
+      document.getElementById('btn-close').className = "w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-500/20";
+    }
+
+    function updatePnL() {
+      if (!openPosition) {
+        document.getElementById('wt-equity').innerText = '$' + balance.toFixed(2);
+        document.getElementById('wt-pnl').innerText = '$0.00';
+        return;
+      }
+
+      const mult = openPosition.type === 'BUY' ? 1 : -1;
+      const diff = (livePrice - openPosition.entryPrice) * mult;
+      const pnl = diff * openPosition.lot * (openPosition.entryPrice > 1000 ? 10 : 10000);
+      const equity = balance + pnl;
+
+      document.getElementById('wt-equity').innerText = '$' + equity.toFixed(2);
+      document.getElementById('wt-pnl').innerText = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2);
+      document.getElementById('pos-pnl').innerText = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2);
+
+      if (equity <= 184.00) triggerBreach();
+    }
+
+    function closePosition() {
+      if (!openPosition) return;
+      const pnlText = document.getElementById('pos-pnl').innerText.replace('+$', '').replace('-$', '-');
+      balance += parseFloat(pnlText) || 0;
+      openPosition = null;
+
+      document.getElementById('wt-balance').innerText = '$' + balance.toFixed(2);
+      document.getElementById('wt-target').innerText = '$' + Math.max(0, balance - 200).toFixed(2) + ' / $20';
+      document.getElementById('pos-type').innerText = 'AUCUNE';
+      document.getElementById('btn-close').disabled = true;
+      document.getElementById('btn-close').className = "w-full py-2 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl transition cursor-not-allowed";
+      updatePnL();
+    }
+
+    function triggerBreach() {
+      isBreached = true;
+      openPosition = null;
+      document.getElementById('breach-alert').classList.remove('hidden');
+      document.getElementById('wt-equity').innerText = '$184.00';
+    }
+
+    function resetAccount() {
+      balance = 200.00;
+      isBreached = false;
+      document.getElementById('breach-alert').classList.add('hidden');
+      document.getElementById('wt-balance').innerText = '$200.00';
+      updatePnL();
+    }
+
+    let chartInstance = null;
+    function initChart() {
+      const ctx = document.getElementById('equityChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['S1', 'S2', 'S3', 'S4'],
+          datasets: [{
+            label: 'Équité ($)',
+            data: [200, 205, 198, 212],
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            fill: true
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+  </script>
+</body>
+</html>
