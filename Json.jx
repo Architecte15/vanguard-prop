@@ -452,5 +452,8 @@ export default function App() {
         © 2026 Vanguard Prop Firm. Plateforme institutionnelle de simulation d'évaluation financière.
       </footer>
     </div>
-  );
+  );git add .
+git commit -m "Mise à jour du WebTrader et des pass hebdomadaires"
+git push origin main
+
 }
