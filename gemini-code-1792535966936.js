@@ -1,0 +1,456 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  TrendingUp, 
+  ShieldAlert, 
+  Award, 
+  Wallet, 
+  Zap, 
+  CheckCircle2, 
+  XCircle, 
+  BarChart3, 
+  Lock, 
+  Globe, 
+  DollarSign, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  Sparkles,
+  Calendar,
+  Clock
+} from 'lucide-react';
+
+const MARKETS = [
+  { name: 'Bitcoin', symbol: 'BINANCE:BTCUSDT', tv: 'BINANCE:BTCUSDT', price: 65000.00, type: 'crypto' },
+  { name: 'Ethereum', symbol: 'BINANCE:ETHUSDT', tv: 'BINANCE:ETHUSDT', price: 3400.00, type: 'crypto' },
+  { name: 'Or (XAUUSD)', symbol: 'OANDA:XAUUSD', tv: 'OANDA:XAUUSD', price: 2650.00, type: 'forex' },
+  { name: 'EUR / USD', symbol: 'FX:EURUSD', tv: 'FX:EURUSD', price: 1.0850, type: 'forex' },
+  { name: 'GBP / USD', symbol: 'FX:GBPUSD', tv: 'FX:GBPUSD', price: 1.3070, type: 'forex' },
+  { name: 'USD / JPY', symbol: 'FX:USDJPY', tv: 'FX:USDJPY', price: 149.90, type: 'forex' }
+];
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('landing');
+  const [pricingPeriod, setPricingPeriod] = useState('one-time'); // 'one-time' | 'weekly'
+  
+  // Trading Engine States
+  const [balance, setBalance] = useState(200.00);
+  const [openPosition, setOpenPosition] = useState(null);
+  const [currentSymbol, setCurrentSymbol] = useState(MARKETS[0]);
+  const [currentPrice, setCurrentPrice] = useState(65000.00);
+  const [isBreached, setIsBreached] = useState(false);
+  const [tradeLot, setTradeLot] = useState(0.10);
+  const [statusBanner, setStatusBanner] = useState(null);
+  const activeWsRef = useRef(null);
+
+  // Admin Modal State
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+
+  // Switch Market & Stream
+  useEffect(() => {
+    if (activeTab === 'webtrader') {
+      connectRealTimeStream(currentSymbol);
+    }
+    return () => {
+      if (activeWsRef.current) {
+        if (typeof activeWsRef.current === 'number') clearInterval(activeWsRef.current);
+        else if (activeWsRef.current.close) activeWsRef.current.close();
+      }
+    };
+  }, [currentSymbol, activeTab]);
+
+  const connectRealTimeStream = (market) => {
+    if (activeWsRef.current) {
+      if (typeof activeWsRef.current === 'number') clearInterval(activeWsRef.current);
+      else if (activeWsRef.current.close) activeWsRef.current.close();
+    }
+
+    if (market.type === 'crypto') {
+      const streamName = market.symbol.split(':')[1].toLowerCase() + '@trade';
+      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${streamName}`);
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const p = parseFloat(data.p);
+        setCurrentPrice(p);
+      };
+      activeWsRef.current = ws;
+    } else {
+      const interval = setInterval(() => {
+        const diff = (Math.random() - 0.48) * (market.price > 1000 ? 1.5 : 0.0002);
+        setCurrentPrice(prev => Math.max(0.0001, prev + diff));
+      }, 1000);
+      activeWsRef.current = interval;
+    }
+  };
+
+  // PnL & Equity Calculations
+  const getPnL = () => {
+    if (!openPosition) return 0;
+    const mult = openPosition.type === 'BUY' ? 1 : -1;
+    const diff = (currentPrice - openPosition.entryPrice) * mult;
+    const multiplierFactor = currentPrice > 1000 ? 1 : 10000;
+    return diff * openPosition.lot * multiplierFactor;
+  };
+
+  const currentPnL = getPnL();
+  const currentEquity = balance + currentPnL;
+
+  // Auto Breach Check
+  useEffect(() => {
+    if (activeTab !== 'webtrader' || isBreached) return;
+
+    if (currentEquity >= 220.00 && balance < 220) {
+      setStatusBanner({
+        text: "🎉 Objectif de $220 atteint ! Félicitations, vous avez réussi l'évaluation.",
+        style: "bg-emerald-500/20 border-emerald-500 text-emerald-300"
+      });
+    } else if (currentEquity <= 184.00) {
+      setIsBreached(true);
+      setOpenPosition(null);
+      setStatusBanner({
+        text: "🛑 Compte invalidé. L'équité a atteint le seuil critique de $184.00.",
+        style: "bg-rose-500/20 border-rose-500 text-rose-300"
+      });
+    }
+  }, [currentEquity, activeTab, isBreached]);
+
+  // Trading Actions
+  const handleExecuteTrade = (type) => {
+    if (isBreached || openPosition) return;
+    setOpenPosition({
+      type,
+      entryPrice: currentPrice,
+      lot: tradeLot
+    });
+  };
+
+  const handleClosePosition = () => {
+    if (!openPosition) return;
+    setBalance(prev => prev + currentPnL);
+    setOpenPosition(null);
+  };
+
+  const handleResetAccount = () => {
+    setBalance(200.00);
+    setIsBreached(false);
+    setOpenPosition(null);
+    setStatusBanner(null);
+  };
+
+  const openAdminModal = () => {
+    const pin = prompt("Code PIN Administrateur Vanguard :");
+    if (pin === "2026") {
+      setIsAdminUnlocked(true);
+      alert("🔒 Espace Fondateur Déverrouillé.");
+    } else {
+      alert("Code PIN invalide.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#07090e] text-slate-100 font-sans selection:bg-emerald-500 selection:text-black">
+      {/* HEADER NAVBAR */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#07090e]/80 border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('landing')}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-amber-400 p-[1px]">
+              <div className="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center font-black text-amber-400 text-xl">V</div>
+            </div>
+            <span className="font-extrabold text-xl tracking-wider text-white">
+              VANGUARD <span className="text-emerald-400">PROP</span>
+            </span>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-1 bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800">
+            <button 
+              onClick={() => setActiveTab('landing')}
+              className={`px-5 py-2 rounded-xl font-semibold text-xs transition ${activeTab === 'landing' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-white'}`}>
+              Accueil
+            </button>
+            <button 
+              onClick={() => setActiveTab('challenges')}
+              className={`px-5 py-2 rounded-xl font-semibold text-xs transition ${activeTab === 'challenges' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-white'}`}>
+              Challenges & Pass Hebdo
+            </button>
+            <button 
+              onClick={() => setActiveTab('webtrader')}
+              className={`px-5 py-2 rounded-xl font-semibold text-xs transition ${activeTab === 'webtrader' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-white'}`}>
+              WebTrader Live
+            </button>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={openAdminModal}
+              className="px-3 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-900 rounded-xl border border-slate-800 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              {isAdminUnlocked ? "Admin Actif" : "Espace Admin"}
+            </button>
+            <button 
+              onClick={() => setActiveTab('webtrader')}
+              className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs rounded-xl hover:opacity-90 transition shadow-lg shadow-emerald-500/20">
+              Lancer le WebTrader
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* LANDING PAGE */}
+        {activeTab === 'landing' && (
+          <div className="space-y-16">
+            <section className="text-center py-12 relative overflow-hidden">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-6">
+                <Sparkles className="w-4 h-4" /> ÉVALUATION SIMULÉE EN TEMPS RÉEL
+              </div>
+              <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight mb-6">
+                Obtenez jusqu'à <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">$200,000 de Capital</span>
+              </h1>
+              <p className="max-w-2xl mx-auto text-slate-400 text-sm md:text-base mb-8">
+                Prouvez votre discipline sur des cotations institutionnelles réelles. Validez l'objectif de 10% sans toucher la ligne rouge de 8% et encaissez 70% de vos bénéfices réels.
+              </p>
+              <div className="flex justify-center gap-4">
+                <button 
+                  onClick={() => setActiveTab('challenges')}
+                  className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm rounded-2xl transition shadow-xl shadow-emerald-500/25">
+                  Rejoindre un Challenge ($15 / 15 000 FCFA)
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* PRICING & CHALLENGES PAGE (AVEC ACCÈS HEBDOMADAIRE) */}
+        {activeTab === 'challenges' && (
+          <div className="space-y-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-3xl font-black text-white">Nos Formules d'Évaluation</h2>
+              <p className="text-slate-400 text-sm max-w-xl mx-auto">
+                Choisissez entre un accès à vie à frais uniques ou optez pour nos **Pass Hebdomadaires** à frais ultra-réduits.
+              </p>
+
+              {/* TOGGLE PERIOD */}
+              <div className="inline-flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+                <button 
+                  onClick={() => setPricingPeriod('one-time')}
+                  className={`px-6 py-2 rounded-xl text-xs font-bold transition ${pricingPeriod === 'one-time' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400'}`}>
+                  Frais Uniques (À vie)
+                </button>
+                <button 
+                  onClick={() => setPricingPeriod('weekly')}
+                  className={`px-6 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${pricingPeriod === 'weekly' ? 'bg-amber-400 text-slate-950 shadow-md' : 'text-slate-400'}`}>
+                  <Calendar className="w-3.5 h-3.5" /> Pass Hebdomadaire (Abonnement)
+                </button>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* CHALLENGE STARTER $200 */}
+              <div className="p-6 rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 border border-emerald-500/30 relative">
+                <div className="absolute -top-3 right-6 px-3 py-1 bg-emerald-500 text-slate-950 text-[10px] font-black rounded-full uppercase">
+                  Le Plus Populaire
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Challenge Starter $200</h3>
+                <p className="text-xs text-slate-400 mb-6">Idéal pour démarrer sans risque avec les paiements locaux.</p>
+                <div className="text-3xl font-black text-emerald-400 mb-6">
+                  {pricingPeriod === 'one-time' ? '15 000 FCFA ($15)' : '5 000 FCFA / sem ($5)'}
+                </div>
+                <ul className="space-y-3 text-xs text-slate-300 mb-8">
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Capital de départ : $200.00</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Objectif de Profit (+10%) : +$20.00</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Seuil Absolu (8% Max DD) : $184.00</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Part de Profit : 70% Trader</li>
+                </ul>
+                <button 
+                  onClick={() => setActiveTab('webtrader')}
+                  className="w-full py-3 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs hover:bg-emerald-400 transition">
+                  Souscrire maintenant
+                </button>
+              </div>
+
+              {/* CHALLENGE PRO 5K */}
+              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800">
+                <h3 className="text-xl font-bold text-white mb-2">Compte Financement $5,000</h3>
+                <p className="text-xs text-slate-400 mb-6">Pour les traders expérimentés prêts à franchir un palier.</p>
+                <div className="text-3xl font-black text-amber-400 mb-6">
+                  {pricingPeriod === 'one-time' ? '$49' : '$15 / semaine'}
+                </div>
+                <ul className="space-y-3 text-xs text-slate-300 mb-8">
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Capital de départ : $5,000</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Objectif de Profit (+10%) : +$500</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Perte Max Journalière : 4%</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Part de Profit : 80% Trader</li>
+                </ul>
+                <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition">
+                  Sélectionner
+                </button>
+              </div>
+
+              {/* CHALLENGE ELITE 25K */}
+              <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800">
+                <h3 className="text-xl font-bold text-white mb-2">Compte Elite $25,000</h3>
+                <p className="text-xs text-slate-400 mb-6">Capital conséquent avec conditions institutionnelles.</p>
+                <div className="text-3xl font-black text-teal-400 mb-6">
+                  {pricingPeriod === 'one-time' ? '$199' : '$45 / semaine'}
+                </div>
+                <ul className="space-y-3 text-xs text-slate-300 mb-8">
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-teal-400" /> Capital de départ : $25,000</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-teal-400" /> Objectif de Profit (+10%) : +$2,500</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-teal-400" /> Perte Max Globale : 10%</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-teal-400" /> Part de Profit : 85% Trader</li>
+                </ul>
+                <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition">
+                  Sélectionner
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* WEBTRADER TERMINAL INTERACTIF (TON CODE INTEGRE) */}
+        {activeTab === 'webtrader' && (
+          <div className="space-y-6">
+            {/* STATS STRIP */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Solde Capital</span>
+                <div className="text-lg font-black text-white font-mono">${balance.toFixed(2)}</div>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Équité Live</span>
+                <div className={`text-lg font-black font-mono ${currentEquity >= balance ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  ${currentEquity.toFixed(2)}
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                <span className="text-[10px] text-slate-500 uppercase font-bold">PnL Flottant</span>
+                <div className={`text-lg font-black font-mono ${currentPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {currentPnL >= 0 ? '+$' : '-$'}{Math.abs(currentPnL).toFixed(2)}
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Objectif ($220)</span>
+                <div className="text-lg font-black text-amber-400 font-mono">
+                  ${Math.max(0, balance - 200).toFixed(2)} / $20.00
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                <span className="text-[10px] text-slate-500 uppercase font-bold">Seuil Max ($184)</span>
+                <div className="text-lg font-black text-rose-400 font-mono">
+                  {isBreached ? "STOP OUT" : "Sécurisé"}
+                </div>
+              </div>
+            </div>
+
+            {/* STATUS BANNER */}
+            {statusBanner && (
+              <div className={`p-4 rounded-2xl border font-bold text-xs flex justify-between items-center ${statusBanner.style}`}>
+                <span>{statusBanner.text}</span>
+                <button onClick={handleResetAccount} className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-white font-bold text-[10px]">
+                  Réinitialiser la simulation
+                </button>
+              </div>
+            )}
+
+            {/* MAIN TRADING BOARD */}
+            <div className="grid md:grid-cols-4 gap-4">
+              {/* MARKETS LIST */}
+              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Actifs Disponibles</h3>
+                {MARKETS.map(m => (
+                  <div 
+                    key={m.symbol}
+                    onClick={() => setCurrentSymbol(m)}
+                    className={`p-3 rounded-xl cursor-pointer border flex justify-between items-center transition ${currentSymbol.symbol === m.symbol ? 'bg-slate-800 border-emerald-500/50' : 'bg-slate-950/60 border-slate-900 hover:bg-slate-800/50'}`}>
+                    <div>
+                      <div className="font-bold text-white text-xs">{m.name}</div>
+                      <div className="text-[10px] text-slate-500 font-mono">{m.symbol}</div>
+                    </div>
+                    <div className="font-mono text-emerald-400 font-bold text-xs">
+                      {currentSymbol.symbol === m.symbol ? currentPrice.toFixed(currentPrice > 1000 ? 2 : 4) : m.price}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* TRADINGVIEW CHART CONTAINER */}
+              <div className="md:col-span-2 rounded-2xl bg-slate-950 border border-slate-800/80 overflow-hidden flex flex-col min-h-[450px]">
+                <div className="p-3 bg-slate-900/80 border-b border-slate-800 flex justify-between items-center">
+                  <span className="text-xs font-bold text-white">{currentSymbol.name} ({currentSymbol.symbol})</span>
+                  <span className="text-xs font-mono font-bold text-emerald-400">
+                    Live: ${currentPrice.toFixed(currentPrice > 1000 ? 2 : 4)}
+                  </span>
+                </div>
+                <div className="flex-1 flex items-center justify-center text-slate-600 text-xs font-mono">
+                  [ Module Graphique TradingView : {currentSymbol.tv} ]
+                </div>
+              </div>
+
+              {/* ORDER PANEL */}
+              <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Passer un Ordre</h3>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase">Volume (Lots)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={tradeLot} 
+                    onChange={(e) => setTradeLot(parseFloat(e.target.value) || 0.01)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500" 
+                  />
+                  <div className="flex gap-1">
+                    {[0.01, 0.05, 0.10, 0.50].map(l => (
+                      <button key={l} onClick={() => setTradeLot(l)} className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-300 rounded-lg">
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button 
+                    onClick={() => handleExecuteTrade('BUY')}
+                    disabled={isBreached || openPosition !== null}
+                    className="py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 text-slate-950 font-black text-xs rounded-xl transition">
+                    ACHETER (BUY)
+                  </button>
+                  <button 
+                    onClick={() => handleExecuteTrade('SELL')}
+                    disabled={isBreached || openPosition !== null}
+                    className="py-3 bg-rose-500 hover:bg-rose-400 disabled:opacity-30 text-slate-950 font-black text-xs rounded-xl transition">
+                    VENDRE (SELL)
+                  </button>
+                </div>
+
+                {/* ACTIVE POSITION SUMMARY */}
+                <div className="pt-4 border-t border-slate-800/80 space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Position :</span>
+                    <span className={`font-bold ${openPosition ? (openPosition.type === 'BUY' ? 'text-emerald-400' : 'text-rose-400') : 'text-slate-400'}`}>
+                      {openPosition ? `${openPosition.type} (${openPosition.lot} lot)` : 'AUCUNE'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">PnL Position :</span>
+                    <span className={`font-mono font-bold ${currentPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {currentPnL >= 0 ? '+$' : '-$'}{Math.abs(currentPnL).toFixed(2)}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={handleClosePosition}
+                    disabled={!openPosition}
+                    className={`w-full py-2.5 font-bold text-xs rounded-xl transition ${openPosition ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
+                    Clôturer la Position
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="max-w-7xl mx-auto px-4 py-8 border-t border-slate-900 text-center text-slate-600 text-xs">
+        © 2026 Vanguard Prop Firm. Plateforme institutionnelle de simulation d'évaluation financière.
+      </footer>
+    </div>
+  );
+}
